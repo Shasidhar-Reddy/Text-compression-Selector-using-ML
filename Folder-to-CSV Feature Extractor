@@ -1,0 +1,53 @@
+def extract_features(file_path):
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            text = f.read()
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}")
+        return None
+    if not text:
+        return None
+
+    feats = {
+        "File": os.path.basename(file_path),
+        "Entropy": calculate_entropy(text),
+        "UniqueSymbols": unique_symbol_count(text),
+        "MeanRunLength": mean_run_length(text),
+        "MaxRunLength": max_run_length(text),
+        "SymbolFreqVariance": symbol_frequency_variance(text),
+        "BigramRepeatRate": bigram_repeat_rate(text),
+        "TrigramRepeatRate": trigram_repeat_rate(text),
+        "CharacterRepetitionRatio": character_repetition_ratio(text),
+        "AvgWordLength": avg_word_length(text),
+        "WhitespaceRatio": whitespace_ratio(text),
+        "FileSize": os.path.getsize(file_path)
+    }
+    return feats
+
+def extract_folder_to_csv(folder_path, output_csv):
+    print("Extracting features...")
+
+    os.makedirs(os.path.dirname(output_csv), exist_ok=True)
+    all_features = []
+
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+        if os.path.isfile(file_path):
+            feats = extract_features(file_path)
+            if feats:
+                all_features.append(feats)
+
+    if not all_features:
+        print("No valid files found.")
+        return
+
+    columns = [
+        "File", "Entropy", "UniqueSymbols", "MeanRunLength", "MaxRunLength",
+        "SymbolFreqVariance", "BigramRepeatRate", "TrigramRepeatRate",
+        "CharacterRepetitionRatio", "AvgWordLength", "WhitespaceRatio", "FileSize"
+    ]
+
+    with open(output_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows(all_features)

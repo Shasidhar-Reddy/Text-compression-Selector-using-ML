@@ -1,0 +1,103 @@
+#RLE Algorithm
+def rle_compress(data: bytes) -> bytes:
+    compressed = bytearray()
+    i = 0
+    while i < len(data):
+        count = 1
+        while i + 1 < len(data) and data[i] == data[i+1] and count < 255:
+            i += 1
+            count += 1
+        compressed.extend([count, data[i]])
+        i += 1
+    return bytes(compressed)
+
+def rle_decompress(data: bytes) -> bytes:
+    decompressed = bytearray()
+    i = 0
+    while i < len(data):
+        count = data[i]
+        value = data[i+1]
+        decompressed.extend([value] * count)
+        i += 2
+    return bytes(decompressed)
+#LZW Algorithm
+def lzw_compress(data: bytes) -> bytes:
+    dictionary = {bytes([i]): i for i in range(256)}
+    w = b""
+    result = []
+    code = 256
+
+    for c in data:
+        wc = w + bytes([c])
+        if wc in dictionary:
+            w = wc
+        else:
+            result.append(dictionary[w])
+            dictionary[wc] = code
+            code += 1
+            w = bytes([c])
+
+    if w:
+        result.append(dictionary[w])
+
+    max_code = max(result)
+    width = 2 if max_code <= 0xFFFF else 3 if max_code <= 0xFFFFFF else 4
+
+    compressed = bytearray([width])
+    for num in result:
+        compressed.extend(num.to_bytes(width, "big"))
+
+    return bytes(compressed)
+#Huffmann coding
+class HuffmanNode:
+    def __init__(self, freq, byte=None, left=None, right=None):
+        self.freq = freq
+        self.byte = byte
+        self.left = left
+        self.right = right
+    def __lt__(self, other):
+        return self.freq < other.freq
+
+def build_huffman_tree(data: bytes):
+    counter = Counter(data)
+    heap = [HuffmanNode(freq, b) for b, freq in counter.items()]
+    heapq.heapify(heap)
+
+    while len(heap) > 1:
+        n1 = heapq.heappop(heap)
+        n2 = heapq.heappop(heap)
+        heapq.heappush(heap, HuffmanNode(n1.freq + n2.freq, None, n1, n2))
+
+    return heap[0]
+
+def build_huffman_codes(node, prefix="", codebook=None):
+    if codebook is None:
+        codebook = {}
+    if node.byte is not None:
+        codebook[node.byte] = prefix
+    else:
+        build_huffman_codes(node.left, prefix + "0", codebook)
+        build_huffman_codes(node.right, prefix + "1", codebook)
+    return codebook
+def huffman_compress(data: bytes):
+    tree = build_huffman_tree(data)
+    codebook = build_huffman_codes(tree)
+    bitstring = "".join(codebook[b] for b in data)
+    extra = (8 - len(bitstring) % 8) % 8
+    bitstring += "0" * extra
+    compressed = bytearray(int(bitstring[i:i+8], 2)
+                           for i in range(0, len(bitstring), 8))
+    return bytes(compressed), codebook
+
+def huffman_decompress(compressed: bytes, codebook: dict) -> bytes:
+    rev = {v: bytes([k]) for k, v in codebook.items()}
+    bitstring = "".join(f"{b:08b}" for b in compressed)
+    result = bytearray()
+
+    code = ""
+    for bit in bitstring:
+        code += bit
+        if code in rev:
+            result.extend(rev[code])
+            code = ""
+    return bytes(result)

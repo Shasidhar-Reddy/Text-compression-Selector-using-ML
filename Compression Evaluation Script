@@ -1,0 +1,14 @@
+import pandas as pd
+
+# Load both datasets
+features_df = pd.read_csv(r"EXTRACTED FEATURE FILE")
+compression_df = pd.read_csv(r"EXTRACTED COMPRESSION FILE"")
+
+# Merge on filename
+final_df = pd.merge(features_df, compression_df, on="file", how="inner")
+
+# Save final merged file
+output_path = r"DESTINATION FILE"
+final_df.to_csv(output_path, index=False)
+
+print("Merged CSV saved to:", output_path)
